@@ -1,8 +1,10 @@
 require "./emoji/*"
 
 module Emoji
-  VERSION     = "0.3.1"
-  EMOJI_REGEX = /[\x{1f000}-\x{1ffff}\x{2049}-\x{3299}\x{a9}\x{2a}\x{ae}\x{fe0f}\x{203c}\x{200d}]+|[0-9#]\x{fe0f}\x{20e3}/
+  VERSION                   = "0.3.1"
+  EMOJI_TAG_SEQUENCE_REGEXP = "(?:\\x{1F3F4}\\x{E0067}\\x{E0062}(?:\\x{E0065}\\x{E006E}\\x{E0067}|\\x{E0073}\\x{E0063}\\x{E0074}|\\x{E0077}\\x{E006C}\\x{E0073})\\x{E007F})"
+  SIMPLE_EMOJI_REGEX        = "[\\x{1f000}-\\x{1ffff}\\x{2049}-\\x{3299}\\x{a9}\\x{2a}\\x{ae}\\x{fe0f}\\x{203c}\\x{200d}]+|[0-9#]\\x{fe0f}\\x{20e3}"
+  EMOJI_REGEX               = Regex.new("#{EMOJI_TAG_SEQUENCE_REGEXP}|#{SIMPLE_EMOJI_REGEX}")
 
   enum RegexType
     Simple
