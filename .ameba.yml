@@ -1,3 +1,6 @@
 LineLength:
   # Disallows lines longer that MaxLength number of symbols.
   MaxLength: 110
+
+Naming/BlockParameterName:
+  Enabled: false

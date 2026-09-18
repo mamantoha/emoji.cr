@@ -35,9 +35,9 @@ class Emoji::Regex::DataLoader
       end
     end
 
-    data_codepoints_regex = data_codepoints.map { |name|
+    data_codepoints_regex = data_codepoints.map do |name|
       name.map { |codepoint| escape_hexadecimal(codepoint) }.join("-")
-    }.join
+    end.join
 
     "[#{data_codepoints_regex}]"
   end
