@@ -24,4 +24,11 @@ describe Emoji::SequenceRegex do
       regex.matches?(candidate).should eq words.includes?(candidate)
     end
   end
+
+  it "omits redundant groups around optional atoms and grouped alternatives" do
+    words = ["a", "ab", "abc", "ad"]
+    pattern = Emoji::SequenceRegex.generate(words.map(&.codepoints))
+    pattern.should eq "\\x{61}(?:\\x{62}\\x{63}?|\\x{64})?"
+    words.join(" ").scan(Regex.new(pattern)).map(&.[0]).should eq words
+  end
 end

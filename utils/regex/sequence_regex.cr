@@ -20,7 +20,13 @@ class Emoji::SequenceRegex
 
     pattern = branches.size == 1 ? branches.first : "(?:#{branches.join("|")})"
     # A terminal node is optional, but greedy: consume the longest sequence.
-    terminal ? "(?:#{pattern})?" : pattern
+    return pattern unless terminal
+    # Alternatives are already grouped; a character or character class is one atom.
+    if branches.size > 1 || suffixes.has_key?("")
+      "#{pattern}?"
+    else
+      "(?:#{pattern})?"
+    end
   end
 
   def self.character_class(codepoints : Array(Int32)) : String
