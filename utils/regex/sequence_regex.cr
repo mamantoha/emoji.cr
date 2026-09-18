@@ -26,8 +26,8 @@ class Emoji::SequenceRegex
       suffix = generate(children[codepoint])
       (suffixes[suffix] ||= [] of Int32) << codepoint
     end
-    branches = suffixes.map do |suffix, codepoints|
-      character_class(codepoints) + suffix
+    branches = suffixes.map do |continuation, codepoints|
+      character_class(codepoints) + continuation
     end
     return "" if branches.empty?
 
