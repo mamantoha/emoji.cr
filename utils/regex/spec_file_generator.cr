@@ -10,13 +10,13 @@ def it_matches(name)
   end
 end
 
-{% for name in data %}it_matches({{name}})
+{% for name in data %}it_matches({{ name }})
 {% end %}
 EOT
 end
 
 macro create_source_file
-  source = generate_source({{run("./test_file_loader.cr").id}})
+  source = generate_source({{ run("./test_file_loader.cr").id }})
   File.write("./spec/emoji/regex_spec.cr", source)
 end
 
