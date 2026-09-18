@@ -94,7 +94,7 @@ crystal build bin/emojize
 
 ## Resources
 
-- [Unicode® Technical Standard #51](http://www.unicode.org/reports/tr51/)
+- [Unicode® Technical Standard #51](http://unicode.org/reports/tr51/)
 - [Emoji Cheat Sheet](http://www.emoji-cheat-sheet.com/)
 
 ## Contributing
