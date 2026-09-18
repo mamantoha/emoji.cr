@@ -1,4 +1,5 @@
 require "http"
+require "./sequence_regex"
 
 class Emoji::Regex::DataLoader
   property :data_lines, :sequences_lines, :zwj_sequences_lines, :variation_sequences_lines
@@ -43,44 +44,20 @@ class Emoji::Regex::DataLoader
   end
 
   def emoji_zwj_sequences_regex
-    # zero-width joiner
-    zwj = "200D"
-
-    emoji_sequences = {} of String => Array(Array(String))
-
+    sequences = [] of Array(Int32)
     zwj_sequences_lines.each do |line|
       if m = SEQUENCES_REGEX.match(line)
-        codepoints = m["codepoints"]
-        head, tail = codepoints.split(zwj, 2).map(&.strip)
-
-        if emoji_sequences.has_key?(head)
-          emoji_sequences[head] << tail.split
-        else
-          emoji_sequences[head] = [tail.split]
+        # Preserve the existing acceptance of omitted emoji variation selectors.
+        variants = [[] of Int32]
+        m["codepoints"].split.each do |hex|
+          codepoint = hex.to_i(16)
+          extended = variants.map { |variant| variant + [codepoint] }
+          variants = codepoint == 0xFE0F ? extended + variants : extended
         end
+        sequences.concat(variants)
       end
     end
-
-    emoji_zwj_sequences_array = [] of String
-
-    emoji_sequences.each do |k, v|
-      io = String::Builder.new
-      io << "(?:"
-      io << k.split.push(zwj).map { |codepoint| escape_hexadecimal(codepoint) }.join
-      io << ")"
-
-      io << "(?:"
-      array = [] of String
-      v.sort_by(&.size).reverse!.each do |vv|
-        array << vv.map { |codepoint| escape_hexadecimal(codepoint) }.join
-      end
-      io << array.join("|")
-      io << ")"
-
-      emoji_zwj_sequences_array << io.to_s
-    end
-
-    emoji_zwj_sequences_array.join("|")
+    sequence_regex(sequences)
   end
 
   def emoji_variation_sequences_regex
@@ -158,39 +135,20 @@ class Emoji::Regex::DataLoader
   end
 
   def emoji_sequences_regex
-    emoji_sequences = {} of String => Array(String)
-
+    sequences = [] of Array(Int32)
     sequences_lines.each do |line|
       if m = SEQUENCES_REGEX.match(line)
         if ["RGI_Emoji_Flag_Sequence", "RGI_Emoji_Modifier_Sequence"].includes?(m["type_field"])
-          codepoints = m["codepoints"].split
-
-          if emoji_sequences.has_key?(codepoints[0])
-            emoji_sequences[codepoints[0]] << codepoints[1]
-          else
-            emoji_sequences[codepoints[0]] = [codepoints[1]]
-          end
+          sequences << m["codepoints"].split.map(&.to_i(16))
         end
       end
     end
+    sequence_regex(sequences)
+  end
 
-    emoji_sequences_array = [] of String
-
-    emoji_sequences.each do |pair|
-      io = String::Builder.new
-      io << escape_hexadecimal(pair[0])
-      io << "["
-      pair[1].each do |codepoint|
-        io << escape_hexadecimal(codepoint)
-      end
-      io << "]"
-
-      emoji_sequences_array << io.to_s
-    end
-
-    emoji_sequences_regex = emoji_sequences_array.join("|")
-
-    "(?:#{emoji_sequences_regex})"
+  private def sequence_regex(sequences)
+    # The generated pattern passes through two macro string literals.
+    Emoji::SequenceRegex.generate(sequences).gsub("\\") { "\\" * 4 }
   end
 
   private def read_lines_from_file(filename) : Array(String)
