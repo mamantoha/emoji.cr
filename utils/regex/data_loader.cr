@@ -23,24 +23,20 @@ class Emoji::Regex::DataLoader
   end
 
   def data_codepoints_regex
-    data_codepoints = [] of Array(String)
+    data_codepoints = [] of Int32
     data_lines.each do |line|
       if m = DATA_REGEX.match(line)
         if ["Emoji_Presentation"].includes?(m["property"])
           if range = /(.+)\.\.(.*)/.match(m["codepoint"])
-            data_codepoints << [range[1], range[2]]
+            data_codepoints.concat(range[1].to_i(16)..range[2].to_i(16))
           else
-            data_codepoints << [m["codepoint"]]
+            data_codepoints << m["codepoint"].to_i(16)
           end
         end
       end
     end
 
-    data_codepoints_regex = data_codepoints.map do |name|
-      name.map { |codepoint| escape_hexadecimal(codepoint) }.join("-")
-    end.join
-
-    "[#{data_codepoints_regex}]"
+    character_class_regex(data_codepoints)
   end
 
   def emoji_zwj_sequences_regex
@@ -63,8 +59,8 @@ class Emoji::Regex::DataLoader
   def emoji_variation_sequences_regex
     variation_selector = "\\\\\\\\x{FE0F}"
 
-    emoji_variations = [] of String
-    text_variations = [] of String
+    emoji_variations = [] of Int32
+    text_variations = [] of Int32
 
     variation_sequences_lines.each do |line|
       if m = SEQUENCES_REGEX.match(line)
@@ -72,37 +68,37 @@ class Emoji::Regex::DataLoader
           codepoints = m["codepoints"].split
 
           if ascii?(codepoints[0])
-            text_variations << codepoints[0]
+            text_variations << codepoints[0].to_i(16)
           else
-            emoji_variations << codepoints[0]
+            emoji_variations << codepoints[0].to_i(16)
           end
         end
       end
     end
 
-    emoji_regex = emoji_variations.map { |codepoint| escape_hexadecimal(codepoint) }.join
-    text_regex = text_variations.map { |codepoint| escape_hexadecimal(codepoint) }.join
+    emoji_regex = character_class_regex(emoji_variations)
+    text_regex = character_class_regex(text_variations)
 
-    "(?:[#{emoji_regex}]#{variation_selector}?)|(?:[#{text_regex}]#{variation_selector})"
+    "(?:#{emoji_regex}#{variation_selector}?)|(?:#{text_regex}#{variation_selector})"
   end
 
   def emoji_keycap_sequences_regex
     enclosing_keycap = ["FE0F", "20E3"]
     enclosing_keycap_regex = enclosing_keycap.map { |codepoint| escape_hexadecimal(codepoint) }.join
 
-    keycaps = [] of String
+    keycaps = [] of Int32
 
     sequences_lines.each do |line|
       if m = SEQUENCES_REGEX.match(line)
         if ["Emoji_Keycap_Sequence"].includes?(m["type_field"])
-          keycaps << m["codepoints"].split(2).first
+          keycaps << m["codepoints"].split(2).first.to_i(16)
         end
       end
     end
 
-    keycaps_regex = keycaps.map { |codepoint| escape_hexadecimal(codepoint) }.join
+    keycaps_regex = character_class_regex(keycaps)
 
-    "(?:[#{keycaps_regex}]#{enclosing_keycap_regex})"
+    "(?:#{keycaps_regex}#{enclosing_keycap_regex})"
   end
 
   # http://www.unicode.org/reports/tr51/#def_emoji_tag_sequence
@@ -149,6 +145,10 @@ class Emoji::Regex::DataLoader
   private def sequence_regex(sequences)
     # The generated pattern passes through two macro string literals.
     Emoji::SequenceRegex.generate(sequences).gsub("\\") { "\\" * 4 }
+  end
+
+  private def character_class_regex(codepoints)
+    Emoji::SequenceRegex.character_class(codepoints).gsub("\\") { "\\" * 4 }
   end
 
   private def read_lines_from_file(filename) : Array(String)
